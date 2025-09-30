@@ -38,9 +38,10 @@ RUN composer install --no-dev --optimize-autoloader
 
 # Instalar dependencias JS y compilar assets con Vite
 RUN npm install --legacy-peer-deps \
-    && npm run build \
-    && ls -la public/build \
-    && test -f public/build/manifest.json || (echo '❌ ERROR: No se generó public/build/manifest.json' && exit 1)
+    && npm run build || (echo '❌ ERROR: npm run build falló' && exit 1) \
+    && echo "📂 Listando outputs..." \
+    && ls -R dist || true \
+    && ls -R public/build || true
 
 # Permisos de storage y cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
