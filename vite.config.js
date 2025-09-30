@@ -14,5 +14,11 @@ export default defineConfig({
     ],
     server: {
         cors: true,
+        https: true,
     },
+    build: {
+        manifest: true,
+        outDir: 'public/build',
+    },
+    base: '/',
 });
