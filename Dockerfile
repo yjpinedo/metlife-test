@@ -24,10 +24,15 @@ RUN npm install && npm run build
 # Permisos de storage y cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
+# ==============================
 # Configuración Nginx
-RUN cat > /etc/nginx/sites-available/default <<'EOF'
+# ==============================
+RUN rm /etc/nginx/sites-enabled/default && \
+    rm /etc/nginx/sites-available/default
+
+RUN cat > /etc/nginx/sites-available/laravel.conf <<'EOF'
 server {
-    listen 80;
+    listen 0.0.0.0:80;
     index index.php index.html;
     root /var/www/html/public;
 
@@ -48,20 +53,26 @@ server {
 }
 EOF
 
-# Configuración Supervisor (Nginx + PHP-FPM)
+RUN ln -s /etc/nginx/sites-available/laravel.conf /etc/nginx/sites-enabled/
+
+# ==============================
+# Configuración Supervisor
+# ==============================
 RUN cat > /etc/supervisor/conf.d/supervisord.conf <<'EOF'
 [supervisord]
 nodaemon=true
 
 [program:php-fpm]
 command=/usr/local/sbin/php-fpm --nodaemonize
+autorestart=true
 
 [program:nginx]
 command=/usr/sbin/nginx -g "daemon off;"
+autorestart=true
 EOF
 
 # Exponer puerto 80
 EXPOSE 80
 
-# Comando de arranque: correr migraciones y luego Supervisor
-CMD ["sh", "-c", "php artisan migrate --force && /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"]
+# Comando de arranque: solo Supervisor (no migraciones aquí)
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
