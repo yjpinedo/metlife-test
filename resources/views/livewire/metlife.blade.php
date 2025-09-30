@@ -7,7 +7,7 @@
             <div class="grid gap-6 sm:grid-cols-4">
                 <div class="">
                     {{--<input class="block w-full text-sm p-4 text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" id="file_input" type="file">--}}
-                    <form wire:submit.prevent>
+                    <form wire:submit.prevent="updatedCsvFile">
                         <input type="file"
                                class="block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
                                wire:model="csvFile"

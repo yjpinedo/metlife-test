@@ -82,7 +82,7 @@ command=/usr/sbin/nginx -g 'daemon off;'\n\
 autorestart=true\n\
 user=root\n" > /etc/supervisor/conf.d/supervisord.conf
 
-# Script de entrada (con PORT dinámico + migraciones)
+# Script de entrada
 RUN printf "#!/bin/bash \n\
 set -e \n\
 echo 'Configurando Nginx con el puerto \${PORT}...' \n\
@@ -92,13 +92,19 @@ mv /etc/nginx/conf.d/default.conf.tmp /etc/nginx/conf.d/default.conf \n\
 echo 'Eliminando .env fake (si existe)...' \n\
 rm -f .env \n\
 \n\
+echo 'Limpiando caches de Laravel...' \n\
+php artisan config:clear \n\
+php artisan cache:clear \n\
+php artisan route:clear \n\
+php artisan view:clear \n\
+\n\
 echo 'Ejecutando migraciones...' \n\
 php artisan migrate --force || true \n\
 \n\
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf \n" \
 > /entrypoint.sh && chmod +x /entrypoint.sh
 
-# Railway maneja el puerto dinámico (usualmente 8080 pero configurable con $PORT)
+# Railway maneja el puerto dinámico
 EXPOSE 8080
 
 # Comando de inicio
