@@ -1,10 +1,10 @@
 FROM php:8.2-fpm
 
-# Instalar dependencias del sistema + Supervisor + Node.js
+# Instalar dependencias del sistema + Supervisor + Node.js 20.x
 RUN apt-get update && apt-get install -y \
     git unzip curl libpng-dev libjpeg-dev libfreetype6-dev \
     libonig-dev libxml2-dev zip nginx supervisor gnupg \
-    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
@@ -18,7 +18,7 @@ COPY . .
 # Instalar dependencias de Laravel (PHP)
 RUN composer install --no-dev --optimize-autoloader
 
-# Instalar dependencias JS y compilar assets con Vite
+# Instalar dependencias JS y compilar assets con Vite (Node 20.x)
 RUN npm install && npm run build
 
 # Permisos de storage y cache
