@@ -59,4 +59,4 @@ EOF
 EXPOSE 80
 
 # Comando de arranque
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD php artisan migrate --force && ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
