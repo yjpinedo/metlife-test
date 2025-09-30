@@ -1,11 +1,10 @@
 <div>
     <div
         class="relative h-full flex-1 overflow-auto rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
-
         <div
             class="relative flex-1 overflow-auto border border-neutral-200 dark:border-neutral-700 p-4">
-            <div class="grid gap-6 sm:grid-cols-4">
-                <div class="">
+            <div class="grid gap-6 sm:grid-cols-2">
+                <div>
                     {{--<input class="block w-full text-sm p-4 text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" id="file_input" type="file">--}}
                     <form wire:submit.prevent="updatedCsvFile">
                         <input type="file"
@@ -41,7 +40,7 @@
                     <th class="border p-4 border-neutral-200 dark:border-neutral-700">Teléfono Cliente</th>
                     <th class="border p-4 border-neutral-200 dark:border-neutral-700">Valor pagado</th>
                     <th class="border p-4 border-neutral-200 dark:border-neutral-700">Estado Orden</th>
-                    <th class="border p-4 border-neutral-200 dark:border-neutral-700">Metlife</th>
+{{--                    <th class="border p-4 border-neutral-200 dark:border-neutral-700">Metlife</th>--}}
                 </tr>
                 </thead>
                 <tbody>
@@ -63,15 +62,15 @@
                                         class="bg-red-100 text-red-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300">{{ $row['Sales Order Status'] }}</span>
                                 @endif
                             </td>
-                            @if($row['Sales Order Status'] == 'Completed')
-                                <td class="border p-4 border-neutral-200 dark:border-neutral-700">
-                                    <button wire:click="openModal({{ json_encode($row) }})" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-xs p-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
-                                        Validar
-                                    </button>
-                                </td>
-                            @else
-                                <td class="border p-4 border-neutral-200 dark:border-neutral-700"></td>
-                            @endif
+{{--                            @if($row['Sales Order Status'] == 'Completed')--}}
+{{--                                <td class="border p-4 border-neutral-200 dark:border-neutral-700">--}}
+{{--                                    <button wire:click="openModal({{ json_encode($row) }})" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-xs p-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">--}}
+{{--                                        Validar--}}
+{{--                                    </button>--}}
+{{--                                </td>--}}
+{{--                            @else--}}
+{{--                                <td class="border p-4 border-neutral-200 dark:border-neutral-700"></td>--}}
+{{--                            @endif--}}
                         </tr>
                     @endforeach
                 @else
