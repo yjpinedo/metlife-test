@@ -22,6 +22,7 @@ APP_ENV=production\n\
 APP_KEY=base64:fakefakefakefakefakefakefakefake=\n\
 APP_DEBUG=false\n\
 APP_URL=http://localhost\n\
+VITE_APP_URL=http://localhost\n\
 LOG_CHANNEL=stack\n\
 DB_CONNECTION=mysql\n\
 DB_HOST=127.0.0.1\n\
@@ -34,7 +35,9 @@ DB_PASSWORD=fake\n" > .env
 RUN composer install --no-dev --optimize-autoloader
 
 # Instalar dependencias JS y compilar assets con Vite
-RUN npm install --legacy-peer-deps && npm run build
+RUN npm install --legacy-peer-deps && npm run build \
+    && ls -la public/build \
+    && test -f public/build/manifest.json || (echo '❌ ERROR: No se generó public/build/manifest.json' && exit 1)
 
 # Permisos de storage y cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
