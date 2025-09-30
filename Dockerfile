@@ -1,27 +1,18 @@
 # Imagen base PHP con FPM
 FROM php:8.2-fpm
 
-# Instalar dependencias del sistema
+# Instalar dependencias del sistema + Supervisor + Node.js 20.x
 RUN apt-get update && apt-get install -y \
-    nginx \
-    supervisor \
-    curl \
-    git \
-    unzip \
-    libonig-dev \
-    libxml2-dev \
-    zip \
-    net-tools \
-    && docker-php-ext-install pdo pdo_mysql mbstring exif pcntl bcmath
+    git unzip curl libpng-dev libjpeg-dev libfreetype6-dev \
+    libonig-dev libxml2-dev zip nginx supervisor gnupg net-tools \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
 # Instalar Composer
-COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Instalar Node.js 20.x
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs
-
-# Copiar archivos del proyecto
+# Directorio de la app
 WORKDIR /var/www/html
 COPY . .
 
@@ -39,8 +30,14 @@ DB_DATABASE=fake\n\
 DB_USERNAME=fake\n\
 DB_PASSWORD=fake\n" > .env
 
-# Construir assets con Vite
+# Instalar dependencias PHP
+RUN composer install --no-dev --optimize-autoloader
+
+# Instalar dependencias JS y compilar assets con Vite
 RUN npm install --legacy-peer-deps && npm run build
+
+# Permisos de storage y cache
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Configuración Nginx
 RUN rm -f /etc/nginx/sites-enabled/* && \
@@ -93,7 +90,7 @@ netstat -tlnp | grep 80 || true \n\
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf \n" \
 > /entrypoint.sh && chmod +x /entrypoint.sh
 
-# Exponer el puerto
+# Exponer puerto 80
 EXPOSE 80
 
 # Comando de inicio
