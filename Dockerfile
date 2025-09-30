@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     zip \
+    net-tools \
     && docker-php-ext-install pdo pdo_mysql mbstring exif pcntl bcmath
 
 # Instalar Composer
@@ -29,53 +30,51 @@ RUN npm install && npm run build
 
 # Configuración Nginx
 RUN rm -f /etc/nginx/sites-enabled/* && \
-    echo 'server {
-        listen 0.0.0.0:80;
-        index index.php index.html;
-        root /var/www/html/public;
-
-        location / {
-            try_files $uri $uri/ /index.php?$query_string;
-        }
-
-        location ~ \.php$ {
-            include fastcgi_params;
-            fastcgi_pass 127.0.0.1:9000;
-            fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-            fastcgi_index index.php;
-        }
-
-        location ~ /\.ht {
-            deny all;
-        }
-    }' > /etc/nginx/sites-available/laravel.conf && \
+    printf "server {\n\
+        listen 0.0.0.0:80;\n\
+        index index.php index.html;\n\
+        root /var/www/html/public;\n\
+\n\
+        location / {\n\
+            try_files \$uri \$uri/ /index.php?\$query_string;\n\
+        }\n\
+\n\
+        location ~ \.php$ {\n\
+            include fastcgi_params;\n\
+            fastcgi_pass 127.0.0.1:9000;\n\
+            fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;\n\
+            fastcgi_index index.php;\n\
+        }\n\
+\n\
+        location ~ /\.ht {\n\
+            deny all;\n\
+        }\n\
+    }\n" > /etc/nginx/sites-available/laravel.conf && \
     cp /etc/nginx/sites-available/laravel.conf /etc/nginx/sites-enabled/default
 
 # Configuración Supervisor
-RUN mkdir -p /etc/supervisor/conf.d
-RUN echo '[supervisord]
-nodaemon=true
-
-[program:php-fpm]
-command=/usr/local/sbin/php-fpm --nodaemonize
-autorestart=true
-user=root
-
-[program:nginx]
-command=/usr/sbin/nginx -g "daemon off;"
-autorestart=true
-user=root
-' > /etc/supervisor/conf.d/supervisord.conf
+RUN mkdir -p /etc/supervisor/conf.d && \
+    printf "[supervisord]\n\
+nodaemon=true\n\
+\n\
+[program:php-fpm]\n\
+command=/usr/local/sbin/php-fpm --nodaemonize\n\
+autorestart=true\n\
+user=root\n\
+\n\
+[program:nginx]\n\
+command=/usr/sbin/nginx -g 'daemon off;'\n\
+autorestart=true\n\
+user=root\n" > /etc/supervisor/conf.d/supervisord.conf
 
 # Script de entrada
-RUN echo '#!/bin/bash \n\
+RUN printf "#!/bin/bash \n\
 set -e \n\
-echo "Ejecutando migraciones..." \n\
+echo 'Ejecutando migraciones...' \n\
 php artisan migrate --force || true \n\
-echo "Verificando puertos abiertos..." \n\
+echo 'Verificando puertos abiertos...' \n\
 netstat -tlnp | grep 80 || true \n\
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf \n\
-' > /entrypoint.sh && chmod +x /entrypoint.sh
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf \n" > /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Exponer el puerto
 EXPOSE 80
