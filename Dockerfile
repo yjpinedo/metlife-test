@@ -5,6 +5,7 @@ FROM php:8.2-fpm
 RUN apt-get update && apt-get install -y \
     git unzip curl libpng-dev libjpeg-dev libfreetype6-dev \
     libonig-dev libxml2-dev zip nginx supervisor gnupg net-tools \
+    python3 make g++ \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
@@ -29,13 +30,15 @@ DB_HOST=127.0.0.1\n\
 DB_PORT=3306\n\
 DB_DATABASE=fake\n\
 DB_USERNAME=fake\n\
-DB_PASSWORD=fake\n" > .env
+DB_PASSWORD=fake\n\
+VITE_API_URL=http://localhost\n" > .env
 
 # Instalar dependencias PHP
 RUN composer install --no-dev --optimize-autoloader
 
 # Instalar dependencias JS y compilar assets con Vite
-RUN npm install --legacy-peer-deps && npm run build \
+RUN npm install --legacy-peer-deps \
+    && npm run build \
     && ls -la public/build \
     && test -f public/build/manifest.json || (echo '❌ ERROR: No se generó public/build/manifest.json' && exit 1)
 
