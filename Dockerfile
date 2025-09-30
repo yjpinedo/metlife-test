@@ -71,8 +71,16 @@ command=/usr/sbin/nginx -g "daemon off;"
 autorestart=true
 EOF
 
+# ==============================
+# Script de entrada
+# ==============================
+RUN echo '#!/bin/sh' > /entrypoint.sh \
+    && echo 'php artisan migrate --force || true' >> /entrypoint.sh \
+    && echo '/usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf' >> /entrypoint.sh \
+    && chmod +x /entrypoint.sh
+
 # Exponer puerto 80
 EXPOSE 80
 
-# Comando de arranque: solo Supervisor (no migraciones aquí)
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Usar el entrypoint
+CMD ["/entrypoint.sh"]
