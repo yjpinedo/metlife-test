@@ -20,26 +20,40 @@ RUN composer install --no-dev --optimize-autoloader
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Configuración Nginx
-RUN echo 'server { \
-    listen 80; \
-    index index.php index.html; \
-    root /var/www/html/public; \
-    location / { try_files $uri $uri/ /index.php?$query_string; } \
-    location ~ \.php$ { include fastcgi_params; fastcgi_pass unix:/run/php/php-fpm.sock; fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; fastcgi_index index.php; } \
-    location ~ /\.ht { deny all; } \
-}' > /etc/nginx/sites-available/default
+RUN cat > /etc/nginx/sites-available/default <<'EOF'
+server {
+    listen 80;
+    index index.php index.html;
+    root /var/www/html/public;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_index index.php;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+}
+EOF
 
 # Configuración Supervisor
-RUN mkdir -p /etc/supervisor/conf.d
-RUN echo '[supervisord] \
-nodaemon=true \
-\n\
-[program:php-fpm] \
-command=/usr/local/sbin/php-fpm --nodaemonize \
-\n\
-[program:nginx] \
-command=/usr/sbin/nginx -g "daemon off;" \
-' > /etc/supervisor/conf.d/supervisord.conf
+RUN cat > /etc/supervisor/conf.d/supervisord.conf <<'EOF'
+[supervisord]
+nodaemon=true
+
+[program:php-fpm]
+command=/usr/local/sbin/php-fpm --nodaemonize
+
+[program:nginx]
+command=/usr/sbin/nginx -g "daemon off;"
+EOF
 
 # Exponer puerto 80
 EXPOSE 80
