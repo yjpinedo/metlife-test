@@ -5,7 +5,6 @@ FROM php:8.2-fpm
 RUN apt-get update && apt-get install -y \
     git unzip curl libpng-dev libjpeg-dev libfreetype6-dev \
     libonig-dev libxml2-dev zip nginx supervisor gnupg net-tools \
-    python3 make g++ \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
@@ -22,8 +21,7 @@ RUN printf "APP_NAME=Laravel\n\
 APP_ENV=production\n\
 APP_KEY=base64:fakefakefakefakefakefakefakefake=\n\
 APP_DEBUG=false\n\
-APP_URL=https://metlife-test.onrender.com\n\
-ASSET_URL=https://metlife-test.onrender.com\n\
+APP_URL=http://localhost\n\
 LOG_CHANNEL=stack\n\
 DB_CONNECTION=mysql\n\
 DB_HOST=127.0.0.1\n\
@@ -36,19 +34,17 @@ DB_PASSWORD=fake\n" > .env
 RUN composer install --no-dev --optimize-autoloader
 
 # Instalar dependencias JS y compilar assets con Vite
-RUN npm install --legacy-peer-deps \
-    && npm run build || (echo '❌ ERROR: npm run build falló' && exit 1) \
-    && echo "📂 Listando outputs..." \
-    && ls -R dist || true \
-    && ls -R public/build || true
+RUN npm install --legacy-peer-deps && npm run build \
+    && ls -la public/build \
+    && test -f public/build/manifest.json || (echo '❌ ERROR: No se generó public/build/manifest.json' && exit 1)
 
 # Permisos de storage y cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Configuración Nginx (puerto dinámico $PORT de Render)
+# Configuración Nginx (usar $PORT que define Railway)
 RUN rm -f /etc/nginx/sites-enabled/* && \
     printf "server {\n\
-        listen 0.0.0.0:PORT_REPLACE;\n\
+        listen 0.0.0.0:\${PORT};\n\
         index index.php index.html;\n\
         root /var/www/html/public;\n\
 \n\
@@ -56,7 +52,7 @@ RUN rm -f /etc/nginx/sites-enabled/* && \
             try_files \$uri \$uri/ /index.php?\$query_string;\n\
         }\n\
 \n\
-        location ~ \.php$ {\n\
+        location ~ \.php\$ {\n\
             include fastcgi_params;\n\
             fastcgi_pass 127.0.0.1:9000;\n\
             fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;\n\
@@ -77,29 +73,32 @@ nodaemon=true\n\
 [program:php-fpm]\n\
 command=/usr/local/sbin/php-fpm --nodaemonize\n\
 autorestart=true\n\
-user=root\n\
 \n\
 [program:nginx]\n\
 command=/usr/sbin/nginx -g 'daemon off;'\n\
-autorestart=true\n\
-user=root\n" > /etc/supervisor/conf.d/supervisord.conf
+autorestart=true\n" > /etc/supervisor/conf.d/supervisord.conf
 
 # Script de entrada
 RUN printf "#!/bin/bash \n\
 set -e \n\
-: \${PORT:=10000} \n\
-echo \"🔧 Usando puerto \$PORT\" \n\
-sed -i \"s/PORT_REPLACE/\$PORT/\" /etc/nginx/sites-available/laravel.conf \n\
+echo 'Eliminando .env fake (si existe)...' \n\
 rm -f .env \n\
-echo '📦 Ejecutando migraciones...' \n\
+\n\
+echo 'Esperando a la base de datos...' \n\
+until php -r \"try { new PDO(getenv('DB_CONNECTION').':host='.getenv('DB_HOST').';port='.getenv('DB_PORT').';dbname='.getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD')); exit(0); } catch (Exception \$e) { exit(1); }\"; do \n\
+  echo 'DB no disponible, reintentando en 3s...'\n\
+  sleep 3\n\
+done\n\
+\n\
+echo 'Ejecutando migraciones...' \n\
 php artisan migrate --force || true \n\
-echo '🌐 Verificando puertos abiertos...' \n\
-netstat -tlnp | grep \$PORT || true \n\
+\n\
+echo 'Levantando supervisor...' \n\
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf \n" \
 > /entrypoint.sh && chmod +x /entrypoint.sh
 
-# Exponer puerto (Render lo reemplaza con $PORT)
-EXPOSE 10000
+# Exponer el puerto dinámico que asigna Railway
+EXPOSE ${PORT}
 
 # Comando de inicio
 CMD ["/entrypoint.sh"]
