@@ -26,7 +26,21 @@ WORKDIR /var/www/html
 COPY . .
 
 # Construir assets con Vite
-RUN npm install && npm run build
+RUN printf "APP_NAME=Laravel\n\
+APP_ENV=production\n\
+APP_KEY=base64:fakefakefakefakefakefakefakefake=\n\
+APP_DEBUG=false\n\
+APP_URL=http://localhost\n\
+LOG_CHANNEL=stack\n\
+DB_CONNECTION=mysql\n\
+DB_HOST=127.0.0.1\n\
+DB_PORT=3306\n\
+DB_DATABASE=fake\n\
+DB_USERNAME=fake\n\
+DB_PASSWORD=fake\n" > .env
+
+# Construir assets con Vite
+RUN npm install --legacy-peer-deps && npm run build
 
 # Configuración Nginx
 RUN rm -f /etc/nginx/sites-enabled/* && \
