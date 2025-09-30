@@ -1,7 +1,7 @@
 # Imagen base PHP con FPM
 FROM php:8.2-fpm
 
-# Instalar dependencias
+# Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \
@@ -25,7 +25,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 WORKDIR /var/www/html
 COPY . .
 
-# Construir assets con Vite
+# Crear .env fake para que Vite no falle en build
 RUN printf "APP_NAME=Laravel\n\
 APP_ENV=production\n\
 APP_KEY=base64:fakefakefakefakefakefakefakefake=\n\
@@ -84,11 +84,14 @@ user=root\n" > /etc/supervisor/conf.d/supervisord.conf
 # Script de entrada
 RUN printf "#!/bin/bash \n\
 set -e \n\
+echo 'Eliminando .env fake (si existe)...' \n\
+rm -f .env \n\
 echo 'Ejecutando migraciones...' \n\
 php artisan migrate --force || true \n\
 echo 'Verificando puertos abiertos...' \n\
 netstat -tlnp | grep 80 || true \n\
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf \n" > /entrypoint.sh && chmod +x /entrypoint.sh
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf \n" \
+> /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Exponer el puerto
 EXPOSE 80
