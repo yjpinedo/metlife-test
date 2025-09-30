@@ -22,34 +22,32 @@ RUN printf "APP_NAME=Laravel\n\
 APP_ENV=production\n\
 APP_KEY=base64:fakefakefakefakefakefakefakefake=\n\
 APP_DEBUG=false\n\
-APP_URL=http://localhost\n\
-VITE_APP_URL=http://localhost\n\
+APP_URL=https://metlife-test.onrender.com\n\
+ASSET_URL=https://metlife-test.onrender.com\n\
 LOG_CHANNEL=stack\n\
 DB_CONNECTION=mysql\n\
 DB_HOST=127.0.0.1\n\
 DB_PORT=3306\n\
 DB_DATABASE=fake\n\
 DB_USERNAME=fake\n\
-DB_PASSWORD=fake\n\
-VITE_API_URL=http://localhost\n" > .env
+DB_PASSWORD=fake\n" > .env
 
 # Instalar dependencias PHP
 RUN composer install --no-dev --optimize-autoloader
 
 # Instalar dependencias JS y compilar assets con Vite
 RUN npm install --legacy-peer-deps \
-    && npm run build || (echo '❌ ERROR: npm run build falló' && exit 1) \
-    && echo "📂 Listando outputs..." \
-    && ls -R dist || true \
-    && ls -R public/build || true
+    && npm run build \
+    && ls -la public/build \
+    && test -f public/build/manifest.json || (echo '❌ ERROR: No se generó public/build/manifest.json' && exit 1)
 
 # Permisos de storage y cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Configuración Nginx
+# Configuración Nginx (puerto dinámico $PORT de Render)
 RUN rm -f /etc/nginx/sites-enabled/* && \
     printf "server {\n\
-        listen 0.0.0.0:80;\n\
+        listen 0.0.0.0:PORT_REPLACE;\n\
         index index.php index.html;\n\
         root /var/www/html/public;\n\
 \n\
@@ -88,17 +86,19 @@ user=root\n" > /etc/supervisor/conf.d/supervisord.conf
 # Script de entrada
 RUN printf "#!/bin/bash \n\
 set -e \n\
-echo 'Eliminando .env fake (si existe)...' \n\
+: \${PORT:=10000} \n\
+echo \"🔧 Usando puerto \$PORT\" \n\
+sed -i \"s/PORT_REPLACE/\$PORT/\" /etc/nginx/sites-available/laravel.conf \n\
 rm -f .env \n\
-echo 'Ejecutando migraciones...' \n\
+echo '📦 Ejecutando migraciones...' \n\
 php artisan migrate --force || true \n\
-echo 'Verificando puertos abiertos...' \n\
-netstat -tlnp | grep 80 || true \n\
+echo '🌐 Verificando puertos abiertos...' \n\
+netstat -tlnp | grep \$PORT || true \n\
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf \n" \
 > /entrypoint.sh && chmod +x /entrypoint.sh
 
-# Exponer puerto 80
-EXPOSE 80
+# Exponer puerto (Render lo reemplaza con $PORT)
+EXPOSE 10000
 
 # Comando de inicio
 CMD ["/entrypoint.sh"]
