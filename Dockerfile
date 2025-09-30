@@ -5,6 +5,7 @@ FROM php:8.2-fpm
 RUN apt-get update && apt-get install -y \
     git unzip curl libpng-dev libjpeg-dev libfreetype6-dev \
     libonig-dev libxml2-dev zip nginx supervisor gnupg net-tools \
+    gettext-base \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
