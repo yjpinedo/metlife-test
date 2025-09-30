@@ -1,9 +1,11 @@
 FROM php:8.2-fpm
 
-# Instalar dependencias
+# Instalar dependencias del sistema + Supervisor + Node.js
 RUN apt-get update && apt-get install -y \
     git unzip curl libpng-dev libjpeg-dev libfreetype6-dev \
-    libonig-dev libxml2-dev zip nginx supervisor \
+    libonig-dev libxml2-dev zip nginx supervisor gnupg \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
 # Instalar Composer
@@ -13,10 +15,13 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . .
 
-# Instalar dependencias Laravel
+# Instalar dependencias de Laravel (PHP)
 RUN composer install --no-dev --optimize-autoloader
 
-# Permisos
+# Instalar dependencias JS y compilar assets con Vite
+RUN npm install && npm run build
+
+# Permisos de storage y cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Configuración Nginx
@@ -43,7 +48,7 @@ server {
 }
 EOF
 
-# Configuración Supervisor
+# Configuración Supervisor (Nginx + PHP-FPM)
 RUN cat > /etc/supervisor/conf.d/supervisord.conf <<'EOF'
 [supervisord]
 nodaemon=true
@@ -58,5 +63,5 @@ EOF
 # Exponer puerto 80
 EXPOSE 80
 
-# Comando de arranque
-CMD php artisan migrate --force && /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+# Comando de arranque: correr migraciones y luego Supervisor
+CMD ["sh", "-c", "php artisan migrate --force && /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf"]
