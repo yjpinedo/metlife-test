@@ -41,10 +41,10 @@ RUN npm install --legacy-peer-deps && npm run build \
 # Permisos de storage y cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Configuración Nginx (usar $PORT que define Railway)
+# Configuración Nginx para Railway (usa $PORT dinámico)
 RUN rm -f /etc/nginx/sites-enabled/* && \
     printf "server {\n\
-        listen 0.0.0.0:\${PORT};\n\
+        listen \${PORT};\n\
         index index.php index.html;\n\
         root /var/www/html/public;\n\
 \n\
@@ -57,13 +57,14 @@ RUN rm -f /etc/nginx/sites-enabled/* && \
             fastcgi_pass 127.0.0.1:9000;\n\
             fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;\n\
             fastcgi_index index.php;\n\
+            fastcgi_buffer_size 32k;\n\
+            fastcgi_buffers 4 32k;\n\
         }\n\
 \n\
         location ~ /\.ht {\n\
             deny all;\n\
         }\n\
-    }\n" > /etc/nginx/sites-available/laravel.conf && \
-    cp /etc/nginx/sites-available/laravel.conf /etc/nginx/sites-enabled/default
+    }\n" > /etc/nginx/conf.d/default.conf
 
 # Configuración Supervisor
 RUN mkdir -p /etc/supervisor/conf.d && \
@@ -73,32 +74,25 @@ nodaemon=true\n\
 [program:php-fpm]\n\
 command=/usr/local/sbin/php-fpm --nodaemonize\n\
 autorestart=true\n\
+user=root\n\
 \n\
 [program:nginx]\n\
 command=/usr/sbin/nginx -g 'daemon off;'\n\
-autorestart=true\n" > /etc/supervisor/conf.d/supervisord.conf
+autorestart=true\n\
+user=root\n" > /etc/supervisor/conf.d/supervisord.conf
 
 # Script de entrada
 RUN printf "#!/bin/bash \n\
 set -e \n\
 echo 'Eliminando .env fake (si existe)...' \n\
 rm -f .env \n\
-\n\
-echo 'Esperando a la base de datos...' \n\
-until php -r \"try { new PDO(getenv('DB_CONNECTION').':host='.getenv('DB_HOST').';port='.getenv('DB_PORT').';dbname='.getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD')); exit(0); } catch (Exception \$e) { exit(1); }\"; do \n\
-  echo 'DB no disponible, reintentando en 3s...'\n\
-  sleep 3\n\
-done\n\
-\n\
 echo 'Ejecutando migraciones...' \n\
 php artisan migrate --force || true \n\
-\n\
-echo 'Levantando supervisor...' \n\
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf \n" \
 > /entrypoint.sh && chmod +x /entrypoint.sh
 
-# Exponer el puerto dinámico que asigna Railway
-EXPOSE ${PORT}
+# Railway maneja el puerto dinámico
+EXPOSE 8080
 
 # Comando de inicio
 CMD ["/entrypoint.sh"]
