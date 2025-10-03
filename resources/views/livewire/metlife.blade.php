@@ -112,58 +112,5 @@
     </div>
 </div>
 
-@section('scripsMetlife')
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            Livewire.on('clear-order-date', event => {
-                Swal.fire({
-                    icon: event[0].icon,
-                    title: event[0].title || 'Error',
-                    text: event[0].text || '',
-                    confirmButtonColor: '#615fff',
-                    confirmButtonText: 'Listo',
-                    background: '#404040',
-                    color: '#e5e7eb',
-                });
-            });
-
-            Livewire.on('clear-order-file', event => {
-                Swal.fire({
-                    icon: event[0].icon,
-                    title: event[0].title || 'Error',
-                    text: event[0].text || '',
-                    confirmButtonColor: '#615fff',
-                    confirmButtonText: 'Listo',
-                    background: '#404040',
-                    color: '#e5e7eb',
-                });
-            });
-
-            Livewire.on('incorrect-file-format', event => {
-                Swal.fire({
-                    icon: event[0].icon,
-                    title: event[0].title || 'Error',
-                    text: event[0].text || '',
-                    confirmButtonColor: '#615fff',
-                    confirmButtonText: 'Listo',
-                    background: '#404040',
-                    color: '#e5e7eb',
-                });
-            });
-
-            Livewire.on('pending-functionality', event => {
-                Swal.fire({
-                    icon: event[0].icon,
-                    title: event[0].title || 'Error',
-                    text: event[0].text || '',
-                    confirmButtonColor: '#615fff',
-                    confirmButtonText: 'Listo',
-                    background: '#404040',
-                    color: '#e5e7eb',
-                });
-            });
-        });
-    </script>
-@endsection
 
 
