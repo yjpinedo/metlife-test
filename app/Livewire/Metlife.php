@@ -13,6 +13,7 @@ use JetBrains\PhpStorm\NoReturn;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 
 class Metlife extends Component
 {
@@ -23,6 +24,7 @@ class Metlife extends Component
     public $originalData;
 
     public $csvFile;
+    public $policeFile;
     public $csvData;
 
     public $MetlifeDate;
@@ -56,11 +58,15 @@ class Metlife extends Component
         if (count($this->csvData->all()) > 0 && count($this->orders) > 0) {
             foreach ($this->csvData->all() as $row) {
                 foreach ($this->orders as $order) {
-                    if ($order['code'] == $row['Sales Order Code'] && $row['Sales Order Status'] === 'Completed') {
-                        $row['Customer Full Name'] = $order['nameCustomer'];
-                        $row['Customer Document'] = $order['documentCustomer'];
-                        $row['Metlife Service Data'] = $order['data'];
-                        $tempArray[] = $row;
+                    if ($order['code'] == $row['Sales Order Code']) {
+                        if ($row['Sales Order Status'] === 'Completed') {
+                            $row['Original Order Price'] = $this->formatPrice($row['Original Order Price'], 0, -3);
+                            $row['Payment Amount'] = $this->formatPrice($row['Payment Amount'], 0, -3);
+                            $row['Customer Full Name'] = trim($order['nameCustomer']);
+                            $row['Customer Document'] = $order['documentCustomer'];
+                            $row['Metlife Service Data'] = $order['data'];
+                            $tempArray[] = $row;
+                        }
                     }
                 }
             }
@@ -72,6 +78,30 @@ class Metlife extends Component
 
         $this->csvData = $tempArray;
         $this->originalData = $tempArray;
+    }
+
+
+    #[NoReturn]
+    public function updatedPoliceFile(): void
+    {
+        $this->responseInformationAlert('pending-functionality', 'Información', 'Está funcionalidad aún no esta disponible', 'question');
+//        $tempArray = [];
+//        $this->validate([
+//            'policeFile' => 'required|mimes:xlsx,xls|max:2048',
+//        ]);
+//
+//        $path = $this->policeFile->getRealPath();
+//        $polices = $this->readExcel($path);
+//
+//        if (count($polices->toArray()) > 0 && count($this->csvData) > 0) {
+//            foreach ($polices as $police) {
+//                $police['coverage_amount'] = $this->formatPrice($police['Coverage Amount'], 0, -6);
+////                foreach ()
+//                $tempArray[] = $police;
+//            }
+//        }
+//
+//        dd($tempArray, $this->csvData);
     }
 
     public function readCsv($filePath): Collection
@@ -107,6 +137,17 @@ class Metlife extends Component
 
         return collect($rows)->map(function ($row) use ($headers) {
             return array_combine($headers, $row);
+        });
+    }
+
+    private function readExcel($filePath)
+    {
+        $collection = Excel::toCollection((object)null, $filePath)->first();
+        $headers = $collection->first()->toArray();
+        $rows = $collection->skip(1);
+
+        return $rows->map(function ($row) use ($headers) {
+            return array_combine($headers, $row->toArray());
         });
     }
 
@@ -177,7 +218,7 @@ class Metlife extends Component
 
     public function getFullName($customer): string
     {
-        return $customer['Name'] . ' ' . $customer['Surname'];
+        return trim($customer['Name'] . ' ' . $customer['Surname']);
     }
 
     public function responseInformationAlert($name, $title, $description, $icon): void
@@ -187,6 +228,11 @@ class Metlife extends Component
             'text' => $description,
             'icon' => $icon,
         ]);
+    }
+
+    public function formatPrice($price, $start, $length): string
+    {
+        return substr($price, $start, $length);
     }
 
     public function getDataMetlife($order)
