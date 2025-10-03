@@ -13,7 +13,7 @@
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 @fluxAppearance
 
-<link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+{{--<link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">--}}
 <style>
     /* Cambiar color de fondo del calendario */
     .flatpickr-calendar {
