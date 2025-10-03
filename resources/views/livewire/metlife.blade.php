@@ -3,29 +3,26 @@
         class="relative h-full flex-1 overflow-auto rounded-xl border border-neutral-200 dark:border-neutral-700 p-4">
         <div
             class="relative flex-1 overflow-auto border border-neutral-200 dark:border-neutral-700 p-4">
-            <div class="">
-                <div class="">
-                    <div class="relative" wire:ignore>
-                        <input
-                            type="text"
-                            id="date"
-                            name="date"
-                            placeholder="Selecciona una fecha"
-                            class="block rounded-lg border border-gray-300 px-4 py-2 pr-20 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full"
-                        >
-                        <!-- icono calendario -->
-                        <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center">
-                            <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                 viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                      d="M8 7V3m8 4V3M3 11h18M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>
-                            </svg>
-                        </div>
-                    </div>
+            <div class="relative" wire:ignore>
+                <input
+                    type="text"
+                    id="date"
+                    name="date"
+                    placeholder="Selecciona una fecha"
+                    class="block rounded-lg border border-gray-300 px-4 py-2 pr-20 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-full"
+                >
+                <!-- icono calendario -->
+                <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center">
+                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                              d="M8 7V3m8 4V3M3 11h18M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>
+                    </svg>
                 </div>
-                <!-- Input hidden que se sincroniza con Livewire -->
-                <input type="hidden" id="MetlifeDate" wire:model.live="MetlifeDate">
             </div>
+
+            <!-- Input hidden que se sincroniza con Livewire -->
+            <input type="hidden" id="MetlifeDate" wire:model.live="MetlifeDate">
         </div>
 
         @if($MetlifeDate && $orders)

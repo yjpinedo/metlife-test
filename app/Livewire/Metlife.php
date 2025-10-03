@@ -6,7 +6,6 @@ use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Client\Response;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use JetBrains\PhpStorm\NoReturn;
@@ -20,7 +19,6 @@ class Metlife extends Component
     use WithPagination, WithFileUploads;
 
     public $orders;
-    public $order;
     public $originalData;
 
     public $csvFile;
@@ -63,7 +61,8 @@ class Metlife extends Component
                             $row['Original Order Price'] = $this->formatPrice($row['Original Order Price'], 0, -3);
                             $row['Payment Amount'] = $this->formatPrice($row['Payment Amount'], 0, -3);
                             $row['Customer Full Name'] = trim($order['nameCustomer']);
-                            $row['Customer Document'] = $order['documentCustomer'];
+                            $row['Customer Document'] = (int)$order['documentCustomer'];
+                            $row['Amount'] = $order['amount'];
                             $row['Metlife Service Data'] = $order['data'];
                             $tempArray[] = $row;
                         }
@@ -84,24 +83,34 @@ class Metlife extends Component
     #[NoReturn]
     public function updatedPoliceFile(): void
     {
-        $this->responseInformationAlert('pending-functionality', 'Información', 'Está funcionalidad aún no esta disponible', 'question');
-//        $tempArray = [];
-//        $this->validate([
-//            'policeFile' => 'required|mimes:xlsx,xls|max:2048',
-//        ]);
-//
-//        $path = $this->policeFile->getRealPath();
-//        $polices = $this->readExcel($path);
-//
-//        if (count($polices->toArray()) > 0 && count($this->csvData) > 0) {
-//            foreach ($polices as $police) {
-//                $police['coverage_amount'] = $this->formatPrice($police['Coverage Amount'], 0, -6);
-////                foreach ()
-//                $tempArray[] = $police;
-//            }
-//        }
-//
-//        dd($tempArray, $this->csvData);
+        $dataOriginal = $this->csvData;
+        $tempDataMatch = [];
+        $this->validate([
+            'policeFile' => 'required|mimes:xlsx,xls|max:2048',
+        ]);
+
+        $path = $this->policeFile->getRealPath();
+        $polices = $this->readExcel($path);
+
+        if (count($polices->toArray()) > 0 && count($this->csvData) > 0) {
+            foreach ($this->csvData as $row) {
+                foreach ($polices->all() as $police) {
+                    $police['premium'] = (int)$this->formatPrice((string)$police['premium'], 0, -6);
+                    if (((int)$police['id_number'] == (int)$row['Customer Document'])) {
+                        if ($police['premium'] != (int)$row['Amount']) {
+                            $tempDataMatch[] = $row;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (count($tempDataMatch) == 0) {
+            $this->responseInformationAlert('clear-order-file', 'Información', 'No hay órdenes registradas para el archivo seleccionado. Por favor, selecciona otro', 'question');
+            $tempDataMatch = $dataOriginal;
+        }
+
+        $this->csvData = $tempDataMatch;
     }
 
     public function readCsv($filePath): Collection
@@ -145,6 +154,27 @@ class Metlife extends Component
         $collection = Excel::toCollection((object)null, $filePath)->first();
         $headers = $collection->first()->toArray();
         $rows = $collection->skip(1);
+
+        $requiredHeadings = [
+            "idnumber", "name", "policy_number", "certificate_number",
+            "issue_date", "start_date", "end_date", "cancel_date",
+            "premium", "premium_usd", "net_premium", "net_premium_usd",
+            "coverage_amount", "coverage_amount_usd", "status", "status_date",
+            "countryid", "product_family", "cancel_reason", "cancel_reason_description",
+            "reject_reason", "quotation_itemid", "renewal_status", "inspection_type",
+            "error_description", "insurance_purpose", "channelid", "ip_address",
+            "tenant_personid", "brokerid", "partnerid", "insurance_payment_term",
+            "insurance_vigence_term", "referral_personid", "master_policyid",
+            "markup_percent", "cancel_request_date", "tenant_invoiceid", "send_date",
+            "modification_date", "creation_date", "isdeleted", "modifiedby",
+            "createdby", "id_number", null, null, null
+        ];
+
+        $headersDiff = array_diff($headers, $requiredHeadings);
+
+        if (count($headersDiff) > 0) {
+            return collect();
+        }
 
         return $rows->map(function ($row) use ($headers) {
             return array_combine($headers, $row->toArray());
@@ -202,6 +232,7 @@ class Metlife extends Component
                 'code' => $policy['ml_id_tx'],
                 'nameCustomer' => $this->getFullName($data['data']['Customer']),
                 'documentCustomer' => $data['data']['Customer']['IdNumber'],
+                'amount' => $data['data']['Payment']['Amount'],
                 'data' => $data,
             ];
         }
