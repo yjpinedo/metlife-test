@@ -13,13 +13,9 @@ use Livewire\Volt\Volt;
 Volt::route('/', 'auth.login')
     ->name('home');
 
-//Route::view('dashboard', 'dashboard')
-//    ->middleware(['auth', 'verified'])
-//    ->name('dashboard');
-
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('metlife', Metlife::class);
+    //Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('dashboard', Metlife::class)->name('dashboard');
 });
 
 Route::middleware(['auth'])->group(function () {

@@ -2,10 +2,14 @@
 
 namespace App\Livewire;
 
+use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Client\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use JetBrains\PhpStorm\NoReturn;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -16,18 +20,27 @@ class Metlife extends Component
 
     public $orders;
     public $order;
-    public $state;
     public $originalData;
-
-    public $page = 1; // página actual
-    public $perPage = 5; // cantidad por página
 
     public $csvFile;
     public $csvData;
 
-    public function mount($data): void
+    public $MetlifeDate;
+
+    #[NoReturn]
+    public function updatedMetlifeDate(): void
     {
-        $this->orders = $data;
+        if ($this->MetlifeDate != null || $this->MetlifeDate != '') {
+            $this->orders = $this->getOrdersMetlife($this->MetlifeDate);
+            if (count($this->orders) <= 0) {
+                $this->responseInformationAlert('clear-order-date', 'Información', 'No hay órdenes registradas para el día de hoy. Por favor, selecciona otra fecha', 'question');
+            }
+        }
+
+        if ($this->MetlifeDate == '') {
+            $this->csvData = null;
+            $this->orders = [];
+        }
     }
 
     public function updatedCsvFile(): void
@@ -40,45 +53,28 @@ class Metlife extends Component
         $path = $this->csvFile->getRealPath();
         $this->csvData = $this->readCsv($path);
 
-        if (count($this->csvData->all()) > 0) {
+        if (count($this->csvData->all()) > 0 && count($this->orders) > 0) {
             foreach ($this->csvData->all() as $row) {
-                foreach ($this->orders['data'] as $value) {
-                    if ($value['id_tx'] == $row['Sales Order Code']) {
-                        $row['headers'] = $value['rq_policy_format']['headers'];
-                        $row['data'] = $value['rq_policy_format']['data'];
-                        $row['url'] = $value['rq_policy_format']['url'];
+                foreach ($this->orders as $order) {
+                    if ($order['code'] == $row['Sales Order Code'] && $row['Sales Order Status'] === 'Completed') {
+                        $row['Customer Full Name'] = $order['nameCustomer'];
+                        $row['Customer Document'] = $order['documentCustomer'];
+                        $row['Metlife Service Data'] = $order['data'];
                         $tempArray[] = $row;
                     }
                 }
             }
         }
 
+        if (count($tempArray) == 0) {
+            $this->responseInformationAlert('clear-order-file', 'Información', 'No hay órdenes registradas para el archivo seleccionado. Por favor, selecciona otro', 'question');
+        }
+
         $this->csvData = $tempArray;
         $this->originalData = $tempArray;
     }
 
-    public function updatedState(): void
-    {
-        if ($this->state == 'all') {
-            $this->csvData = $this->originalData;
-        }
-
-        if ($this->state == 'Completed') {
-            $this->csvData = $this->originalData;
-            $this->csvData = array_filter($this->csvData, function ($item) {
-                return $item['Sales Order Status'] == 'Completed';
-            });
-        }
-
-        if ($this->state == 'Canceled') {
-            $this->csvData = $this->originalData;
-            $this->csvData = array_filter($this->csvData, function ($item) {
-                return $item['Sales Order Status'] == 'Canceled';
-            });
-        }
-    }
-
-    public function readCsv($filePath): \Illuminate\Support\Collection
+    public function readCsv($filePath): Collection
     {
         $rows = array_map('str_getcsv', file($filePath));
         $headers = array_shift($rows);
@@ -114,47 +110,83 @@ class Metlife extends Component
         });
     }
 
-    public function updatingPage(): void
-    {
-        $this->resetPage();
-    }
-
     public function render(): Factory|View|\Illuminate\View\View
     {
-        $paginator = new LengthAwarePaginator(
-            array_slice($this->orders['data'], ($this->page - 1) * $this->perPage, $this->perPage),
-            $this->orders['total'],
-            $this->perPage,
-            $this->page,
-            ['path' => request()->url(), 'query' => request()->query()]
+        return view('livewire.metlife', ['csvData' => $this->csvData]);
+    }
+
+    public function getOrdersMetlife($date): array
+    {
+        $fullOrders = [];
+        $response = $this->httpRequest(
+            'https://backmiclarodev5.miclarodeveloparo.claro.com.co/M3/Compartidos/Metlife/',
+            [
+                'X-MC-USER-AGENT' => 'eyJpcCI6IjE5Mi4xNjguMS40IiwidXNlckFnZW50IjoiTWlDbGFyb0FwcC8wLjAuMSAoT1BQTzsgQ1BIMjYyNTsgPGFuZHJvaWQvMTU+KSJ9',
+                'X-MC-DEVICE-ID' => 'Y61lbnDt4jkbK6vqMTWICKXfBHTSVtgmxSJ93Vy8SAgkfT6+F49RQnms+U4HOfqnyeXkJsxXKaYjAzkcLq8owIlMyVSS\/xjdrQzavoWQXXX+f82cMKsGNRCSmMtqvkJQSrhgOaml2ehh3aGwZBBDn\/b7QYRELFQAhHKhHgzgZUs=',
+                'X-ACCESS-TOKEN' => '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',
+                'X-ACCESS-ENC' => '1',
+                'X-MC-MAIL' => 'dany_97_@hotmail.es',
+                'X-MC-APP-V' => '18.3.3',
+                'Content-Type' => 'Y61lbnDt4jkbK6vqMTWICKXfBHTSVtgmxSJ93Vy8SAgkfT6+F49RQnms+U4HOfqnyeXkJsxXKaYjAzkcLq8owIlMyVSS\/xjdrQzavoWQXXX+f82cMKsGNRCSmMtqvkJQSrhgOaml2ehh3aGwZBBDn\/b7QYRELFQAhHKhHgzgZUs='
+            ],
+            [
+                "data" => [
+                    "type" => "Q",
+                    "metlifeId" => "",
+                    "metlifeDate" => $date,
+                    "metlifeDateTo" => $date,
+                    "metlifeReq" => ""
+                ]
+            ],
+            'POST'
         );
 
-        return view('livewire.metlife', ['items' => $paginator, 'csvData' => $this->csvData]);
+        $orders = $response->json();
+
+        if (!isset($orders['error']) && !$orders['error'] == 0) {
+            return $fullOrders;
+        }
+
+        if (!isset($orders['response']) && !count($orders['response']) > 0) {
+            return $fullOrders;
+        }
+
+        if (!isset($orders['response']['policies']) && !count($orders['response']['policies']) > 0) {
+            return $fullOrders;
+        }
+
+        foreach ($orders['response']['policies'] as $policy) {
+            $data = json_decode($policy['ml_rq_policy'], true);
+            $fullOrders[] = [
+                'code' => $policy['ml_id_tx'],
+                'nameCustomer' => $this->getFullName($data['data']['Customer']),
+                'documentCustomer' => $data['data']['Customer']['IdNumber'],
+                'data' => $data,
+            ];
+        }
+
+        return $fullOrders;
     }
 
-    public function nextPage(): void
+    public function httpRequest($url, $headers, $request, $method): PromiseInterface|Response
     {
-        $this->page++;
+        return match (true) {
+            $method === 'POST' => Http::withHeaders($headers)->post($url, $request)
+        };
     }
 
-    public function previousPage(): void
+    public function getFullName($customer): string
     {
-        $this->page = max(1, $this->page - 1);
+        return $customer['Name'] . ' ' . $customer['Surname'];
     }
 
-    /* Modal */
-    public $showModal = false;
-
-    public function openModal($order): void
+    public function responseInformationAlert($name, $title, $description, $icon): void
     {
-        $this->order = $order['headers'];
-        $response = $this->getDataMetlife($order);
-        $this->showModal = true;
-    }
-
-    public function closeModal(): void
-    {
-        $this->showModal = false;
+        $this->dispatch($name, [
+            'title' => $title,
+            'text' => $description,
+            'icon' => $icon,
+        ]);
     }
 
     public function getDataMetlife($order)

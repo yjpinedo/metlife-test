@@ -129,5 +129,12 @@
         {{ $slot }}
 
         @fluxScripts
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+        <!-- Español -->
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+        <!-- SweetAlert2 Dark Theme -->
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        @yield('scripsMetlife')
     </body>
 </html>
