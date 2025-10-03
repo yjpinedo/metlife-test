@@ -1,17 +1,18 @@
 # --------------------------
-# Dockerfile para Laravel 12 en Railway
+# Dockerfile para Laravel 12 en Railway (con soporte Excel/Zip)
 # --------------------------
 
-# Imagen base PHP con FPM
-FROM php:8.2-fpm
+# Imagen base PHP con FPM 8.3
+FROM php:8.3-fpm
 
 # Instalar dependencias del sistema + Node.js 20 + Supervisor + gettext-base (para envsubst)
 RUN apt-get update && apt-get install -y \
     git unzip curl libpng-dev libjpeg-dev libfreetype6-dev \
-    libonig-dev libxml2-dev zip nginx supervisor gnupg net-tools gettext-base \
+    libonig-dev libxml2-dev zip libzip-dev nginx supervisor gnupg net-tools gettext-base \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
 # Instalar Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -34,7 +35,7 @@ DB_DATABASE=fake\n\
 DB_USERNAME=fake\n\
 DB_PASSWORD=fake\n" > .env
 
-# Instalar dependencias PHP
+# Instalar dependencias PHP (Laravel)
 RUN composer install --no-dev --optimize-autoloader
 
 # Instalar dependencias JS y compilar assets con Vite
