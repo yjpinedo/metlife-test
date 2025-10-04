@@ -56,15 +56,17 @@ class Metlife extends Component
         if (count($this->csvData->all()) > 0 && count($this->orders) > 0) {
             foreach ($this->csvData->all() as $row) {
                 foreach ($this->orders as $order) {
-                    if ($order['code'] == $row['Sales Order Code']) {
-                        if ($row['Sales Order Status'] === 'Completed') {
-                            $row['Original Order Price'] = $this->formatPrice($row['Original Order Price'], 0, -3);
-                            $row['Payment Amount'] = $this->formatPrice($row['Payment Amount'], 0, -3);
-                            $row['Customer Full Name'] = trim($order['nameCustomer']);
-                            $row['Customer Document'] = (int)$order['documentCustomer'];
-                            $row['Amount'] = $order['amount'];
-                            $row['Metlife Service Data'] = $order['data'];
-                            $tempArray[] = $row;
+                    if (isset($row['Sales Order Status'])) {
+                        if ($order['code'] == $row['Sales Order Code']) {
+                            if ($row['Sales Order Status'] === 'Completed') {
+                                $row['Original Order Price'] = $this->formatPrice($row['Original Order Price'], 0, -3);
+                                $row['Payment Amount'] = $this->formatPrice($row['Payment Amount'], 0, -3);
+                                $row['Customer Full Name'] = trim($order['nameCustomer']);
+                                $row['Customer Document'] = (int)$order['documentCustomer'];
+                                $row['Amount'] = $order['amount'];
+                                $row['Metlife Service Data'] = $order['data'];
+                                $tempArray[] = $row;
+                            }
                         }
                     }
                 }
@@ -95,10 +97,12 @@ class Metlife extends Component
         if (count($polices->toArray()) > 0 && count($this->csvData) > 0) {
             foreach ($this->csvData as $row) {
                 foreach ($polices->all() as $police) {
-                    $police['premium'] = (int)$this->formatPrice((string)$police['premium'], 0, -6);
-                    if (((int)$police['id_number'] == (int)$row['Customer Document'])) {
-                        if ($police['premium'] != (int)$row['Amount']) {
-                            $tempDataMatch[] = $row;
+                    if (isset($police['premium'])) {
+                        $police['premium'] = (int)$this->formatPrice((string)$police['premium'], 0, -6);
+                        if (((int)$police['id_number'] == (int)$row['Customer Document'])) {
+                            if ($police['premium'] != (int)$row['Amount']) {
+                                $tempDataMatch[] = $row;
+                            }
                         }
                     }
                 }
